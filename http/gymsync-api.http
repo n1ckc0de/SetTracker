@@ -1,0 +1,54 @@
+### GymSync API — example HTTP requests
+### Requires REST Client / IntelliJ HTTP Client
+@baseUrl = http://localhost:8080
+@token = {{login.response.body.$.accessToken}}
+
+### Register
+# @name register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "StrongPass1!",
+  "name": "Demo User"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "StrongPass1!"
+}
+
+### List exercises
+GET {{baseUrl}}/api/exercises?page=0&size=20&sort=name,asc
+Authorization: Bearer {{token}}
+
+### Start workout
+# @name startWorkout
+POST {{baseUrl}}/api/workouts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### Complete workout
+PATCH {{baseUrl}}/api/workouts/{{startWorkout.response.body.$.id}}/complete
+Authorization: Bearer {{token}}
+
+### Weekly stats
+GET {{baseUrl}}/api/stats/weekly
+Authorization: Bearer {{token}}
+
+### Import notes
+POST {{baseUrl}}/api/notes/import
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rawText": "Bench 3x8 135 lb, Squat 5x5 185 lb"
+}

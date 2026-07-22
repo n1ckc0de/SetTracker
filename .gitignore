@@ -1,0 +1,49 @@
+# Build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+
+# JaCoCo
+jacoco.exec
+*.exec
+
+# Docker
+docker-data/
+
+# Temporary
+tmp/
+*.tmp
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local

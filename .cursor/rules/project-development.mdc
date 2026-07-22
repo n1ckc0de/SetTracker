@@ -1,0 +1,9 @@
+# SetTracker Development Rules
+
+- Stack: Java 21, Spring Boot 3.x, PostgreSQL, Spring Data JPA, Spring Security (JWT), Spring WebSocket (STOMP)
+- Follow layered architecture: Controller → Service → Repository
+- Use DTOs for request/response bodies, never expose entities directly
+- Write meaningful commit messages after each completed feature (not one giant commit)
+- Add basic unit tests for service-layer logic
+- Prefer constructor injection over field injection
+- Keep methods small and single-purpose

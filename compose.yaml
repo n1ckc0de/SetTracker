@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gymsync-postgres
+    environment:
+      POSTGRES_USER: gymsync
+      POSTGRES_PASSWORD: gymsync
+      POSTGRES_DB: gymsync
+    ports:
+      - "5432:5432"
+    volumes:
+      - gymsync-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymsync -d gymsync"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build: .
+    container_name: gymsync-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: gymsync
+      DB_USER: gymsync
+      DB_PASSWORD: gymsync
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-use-at-least-256-bits-of-entropy!!}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-only-change-me-webhook-secret}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8080}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+volumes:
+  gymsync-postgres-data:

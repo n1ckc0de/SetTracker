@@ -1,0 +1,2559 @@
+openapi: 3.1.0
+info:
+  title: GymSync API
+  description: Gym workout-tracking backend with real-time sync and webhook check-ins.
+  contact:
+    name: GymSync
+    email: dev@example.com
+  license:
+    name: MIT
+  version: 0.1.0
+servers:
+- url: http://localhost
+  description: Generated server url
+security:
+- bearerAuth: []
+tags:
+- name: AI Coach
+  description: "Bounds-checked training recommendations. The coach never modifies\
+    \ workouts directly — users must accept, modify, or dismiss proposals."
+- name: Programs
+  description: User-owned training program builder
+- name: Statistics
+  description: Personal records and progressive-overload recommendations
+- name: Statistics
+  description: Weekly training volume and progress summaries
+- name: Strength
+  description: Deterministic strength calculations
+- name: Workout Sets
+  description: "Logging, editing, and removing sets within a workout"
+- name: Readiness
+  description: Pre-workout readiness check-ins
+- name: Auth
+  description: Registration and login
+- name: Exercises
+  description: Global and user-owned exercise catalog
+- name: Workouts
+  description: "Workout sessions: start, list/filter, complete, cancel"
+- name: Exercise media suggestions
+  description: Auto-suggested media pending human review before publishing onto an
+    exercise
+- name: Notes Import
+  description: AI-assisted import of free-text workout notes
+paths:
+  /api/workouts/{workoutId}/exercises/{exerciseId}/note:
+    put:
+      tags:
+      - Workout Sets
+      summary: Create or update an exercise-level note for a workout
+      operationId: upsertExerciseNote
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertWorkoutExerciseNoteRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutExerciseNoteResponse"
+  /api/sets/{setId}:
+    put:
+      tags:
+      - Workout Sets
+      summary: Update a logged set
+      operationId: updateSet
+      parameters:
+      - name: setId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkoutSetRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutSetResponse"
+    delete:
+      tags:
+      - Workout Sets
+      summary: Delete a logged set
+      operationId: deleteSet
+      parameters:
+      - name: setId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+  /api/programs/{programId}:
+    get:
+      tags:
+      - Programs
+      summary: Get a program with days and planned exercises
+      operationId: get
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProgramDetailResponse"
+    put:
+      tags:
+      - Programs
+      summary: Update program name/description
+      operationId: update
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProgramRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProgramSummaryResponse"
+    delete:
+      tags:
+      - Programs
+      summary: Hard-delete a program and its days (planning data only)
+      operationId: delete
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+  /api/programs/{programId}/days/{dayNumber}:
+    put:
+      tags:
+      - Programs
+      summary: Replace a day's name and planned exercises
+      operationId: updateDay
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dayNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProgramDayRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProgramDayResponse"
+    delete:
+      tags:
+      - Programs
+      summary: Delete a program day
+      operationId: deleteDay
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dayNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "204":
+          description: No Content
+  /api/exercises/{exerciseId}:
+    get:
+      tags:
+      - Exercises
+      summary: "Get a single exercise (global, or owned by the current user)"
+      operationId: getExercise
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseResponse"
+    put:
+      tags:
+      - Exercises
+      summary: Update a custom exercise owned by the current user
+      operationId: updateExercise
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExerciseRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseResponse"
+    delete:
+      tags:
+      - Exercises
+      summary: Delete a custom exercise owned by the current user
+      operationId: deleteExercise
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+  /api/workouts:
+    get:
+      tags:
+      - Workouts
+      summary: "List the current user's workout history, newest first by default"
+      operationId: listWorkouts
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - COMPLETED
+          - CANCELLED
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - MANUAL
+          - WEBHOOK
+          - NOTES_IMPORT
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseWorkoutResponse"
+    post:
+      tags:
+      - Workouts
+      summary: "Start a new manual, active workout (one active workout per user)"
+      operationId: startWorkout
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutResponse"
+  /api/workouts/{workoutId}/sets:
+    get:
+      tags:
+      - Workout Sets
+      summary: List the sets logged for a workout
+      operationId: listSets
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutSetResponse"
+    post:
+      tags:
+      - Workout Sets
+      summary: Log a set on an active workout or a pending-review import
+      operationId: addSet
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkoutSetRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutSetResponse"
+  /api/workouts/{workoutId}/sets/batch:
+    post:
+      tags:
+      - Workout Sets
+      summary: Log multiple sets with shared values at once
+      operationId: addBatchSets
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBatchWorkoutSetsRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutSetResponse"
+  /api/webhooks/checkin:
+    post:
+      tags:
+      - Webhooks
+      summary: Gym check-in webhook (HMAC signed)
+      operationId: checkIn
+      parameters:
+      - name: X-Webhook-Timestamp
+        in: header
+        required: false
+        schema:
+          type: string
+      - name: X-Webhook-Signature
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CheckInWebhookResponse"
+  /api/strength/estimate-1rm:
+    post:
+      tags:
+      - Strength
+      summary: Estimate 1RM from weight and reps using Epley and Brzycki formulas
+      operationId: estimate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Estimate1RmRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Estimate1RmResponse"
+  /api/readiness:
+    get:
+      tags:
+      - Readiness
+      summary: List readiness check-ins in a date range (defaults to last 30 days)
+      operationId: list
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadinessResponse"
+    post:
+      tags:
+      - Readiness
+      summary: Create a readiness check-in (all fields optional)
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReadinessRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+  /api/programs:
+    get:
+      tags:
+      - Programs
+      summary: List programs owned by the current user
+      operationId: list_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgramSummaryResponse"
+    post:
+      tags:
+      - Programs
+      summary: Create a program
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProgramRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProgramSummaryResponse"
+  /api/programs/{programId}/days:
+    post:
+      tags:
+      - Programs
+      summary: Add a day with planned exercises
+      operationId: addDay
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProgramDayRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProgramDayResponse"
+  /api/programs/{programId}/days/{dayNumber}/start:
+    post:
+      tags:
+      - Programs
+      summary: Start an active workout guided by a program day
+      description: Creates a MANUAL ACTIVE workout (same one-active-workout rules
+        as POST /api/workouts). Does not fabricate WorkoutSet rows — returns planned
+        exercises as guidance only.
+      operationId: startDay
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dayNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StartProgramDayResponse"
+  /api/notes/import:
+    post:
+      tags:
+      - Notes Import
+      summary: Parse raw workout notes into a pending-review workout for human confirmation
+      operationId: importNotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportNotesRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutDetailResponse"
+  /api/exercises:
+    get:
+      tags:
+      - Exercises
+      summary: "List exercises visible to the current user (global + own), with search/filter/sort"
+      operationId: listExercises
+      parameters:
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseExerciseResponse"
+    post:
+      tags:
+      - Exercises
+      summary: Create a custom exercise owned by the current user
+      operationId: createExercise
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExerciseRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseResponse"
+  /api/exercises/{exerciseId}/media-suggestions:
+    get:
+      tags:
+      - Exercise media suggestions
+      summary: List media suggestions for an exercise (default status=PENDING)
+      operationId: list_2
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          default: PENDING
+          enum:
+          - PENDING
+          - CONFIRMED
+          - REJECTED
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExerciseMediaSuggestionResponse"
+    post:
+      tags:
+      - Exercise media suggestions
+      summary: "Generate pending media suggestions (curated YouTube, Wikimedia, optional\
+        \ YouTube API)"
+      operationId: generate
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExerciseMediaSuggestionResponse"
+  /api/coach/recommendations/{id}/apply:
+    post:
+      tags:
+      - AI Coach
+      summary: Apply a recommendation to uncompleted sets after explicit approval
+      operationId: applyToSession
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyCoachRecommendationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutSetResponse"
+  /api/coach/recommendations/generate:
+    post:
+      tags:
+      - AI Coach
+      summary: Generate a new proposed recommendation within deterministic bounds
+      description: Uses the latest readiness check-in and recent exercise history.
+        Numeric bounds are computed in application code; the LLM (if enabled) only
+        selects within them.
+      operationId: generate_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateCoachRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/coach/chat:
+    post:
+      tags:
+      - AI Coach
+      summary: Chat-style check-in that returns a structured CoachRecommendation card
+      description: "Parses free text into a readiness check-in, runs the bounds-checked\
+        \ pipeline, and returns a recommendation (not a freeform chat reply). Injury/pain\
+        \ keywords return a fixed safety response without calling the LLM."
+      operationId: chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachChatRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Register a new account and receive an access token
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+      security: []
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Log in with email and password and receive an access token
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+      security: []
+  /api/workouts/{workoutId}/reject-import:
+    patch:
+      tags:
+      - Workouts
+      summary: Reject an AI-imported pending-review workout
+      operationId: rejectImport
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutDetailResponse"
+  /api/workouts/{workoutId}/confirm-import:
+    patch:
+      tags:
+      - Workouts
+      summary: Confirm an AI-imported pending-review workout so it counts toward statistics
+      operationId: confirmImport
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutDetailResponse"
+  /api/workouts/{workoutId}/complete:
+    patch:
+      tags:
+      - Workouts
+      summary: Complete an active workout
+      operationId: completeWorkout
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutDetailResponse"
+  /api/sets/{setId}/complete:
+    patch:
+      tags:
+      - Workout Sets
+      summary: Mark a set complete and evaluate PRs
+      operationId: completeSet
+      parameters:
+      - name: setId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutSetResponse"
+  /api/exercises/{exerciseId}/media-suggestions/{suggestionId}/reject:
+    patch:
+      tags:
+      - Exercise media suggestions
+      summary: Reject a pending media suggestion
+      operationId: reject
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: suggestionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseMediaSuggestionResponse"
+  /api/exercises/{exerciseId}/media-suggestions/{suggestionId}/confirm:
+    patch:
+      tags:
+      - Exercise media suggestions
+      summary: Confirm a pending suggestion and publish its media onto the exercise
+      operationId: confirm
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: suggestionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseMediaSuggestionResponse"
+  /api/coach/recommendations/{id}/modify:
+    patch:
+      tags:
+      - AI Coach
+      summary: "Modify the proposed change on a PROPOSED recommendation, then mark\
+        \ MODIFIED"
+      operationId: modify
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyCoachRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/coach/recommendations/{id}/dismiss:
+    patch:
+      tags:
+      - AI Coach
+      summary: Dismiss a PROPOSED recommendation
+      operationId: dismiss
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/coach/recommendations/{id}/accept:
+    patch:
+      tags:
+      - AI Coach
+      summary: Accept a PROPOSED recommendation (does not mutate workout data)
+      operationId: accept
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/workouts/{workoutId}:
+    get:
+      tags:
+      - Workouts
+      summary: Get a workout with its sets and exercise info
+      operationId: getWorkout
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WorkoutDetailResponse"
+    delete:
+      tags:
+      - Workouts
+      summary: Cancel a workout (soft delete; completed workouts cannot be cancelled)
+      operationId: cancelWorkout
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+  /api/workouts/{workoutId}/exercise-notes:
+    get:
+      tags:
+      - Workout Sets
+      summary: List exercise-level notes for a workout
+      operationId: listExerciseNotes
+      parameters:
+      - name: workoutId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutExerciseNoteResponse"
+  /api/stats/weekly:
+    get:
+      tags:
+      - Statistics
+      summary: Weekly training statistics (Monday-Sunday) for the week containing
+        the given date
+      description: "Counts only confirmed, completed workouts. Defaults to the current\
+        \ week (UTC) when `date` is omitted."
+      operationId: weeklyStats
+      parameters:
+      - name: date
+        in: query
+        description: Any date within the desired week; defaults to today (UTC)
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WeeklyStatsResponse"
+  /api/stats/volume-trend:
+    get:
+      tags:
+      - Statistics
+      summary: "Weekly total volume trend for the last N weeks (default 12, max 52)"
+      operationId: volumeTrend
+      parameters:
+      - name: weeks
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 12
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/VolumeTrendResponse"
+  /api/readiness/latest:
+    get:
+      tags:
+      - Readiness
+      summary: Get the most recent readiness check-in
+      operationId: latest
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+  /api/exercises/{exerciseId}/pr:
+    get:
+      tags:
+      - Statistics
+      summary: "Personal records for an exercise, from confirmed completed workouts\
+        \ only"
+      operationId: personalRecord
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PersonalRecordResponse"
+  /api/exercises/{exerciseId}/pr-history:
+    get:
+      tags:
+      - Statistics
+      summary: Estimated 1RM time series for an exercise (one point per completed
+        session)
+      operationId: prHistory
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PrHistoryResponse"
+  /api/exercises/{exerciseId}/next-session-recommendation:
+    get:
+      tags:
+      - Statistics
+      summary: Deterministic progressive-overload recommendation based on the most
+        recent session
+      operationId: nextSessionRecommendation
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/NextSessionRecommendationResponse"
+  /api/exercises/{exerciseId}/detail:
+    get:
+      tags:
+      - Exercises
+      summary: "Exercise detail: metadata, recent sets, current PR, 1RM trend, and\
+        \ active coach card"
+      operationId: getExerciseDetail
+      parameters:
+      - name: exerciseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExerciseDetailResponse"
+  /api/coach/recommendations:
+    get:
+      tags:
+      - AI Coach
+      summary: "List coach recommendations, optionally filtered by status"
+      operationId: list_3
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PROPOSED
+          - ACCEPTED
+          - MODIFIED
+          - DISMISSED
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachRecommendationResponse"
+  /api/coach/recommendations/{id}/apply-preview:
+    get:
+      tags:
+      - AI Coach
+      summary: Preview applying a recommendation to uncompleted sets in an active
+        workout
+      operationId: applyPreview
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workoutId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachApplyPreviewResponse"
+components:
+  schemas:
+    UpsertWorkoutExerciseNoteRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - note
+    WorkoutExerciseNoteResponse:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        note:
+          type: string
+    UpdateWorkoutSetRequest:
+      type: object
+      properties:
+        enteredWeight:
+          type: number
+          minimum: 0
+        weightEntryMode:
+          type: string
+          enum:
+          - TOTAL
+          - PER_SIDE
+        barWeight:
+          type: number
+          minimum: 0
+        reps:
+          type: integer
+          format: int32
+        setNumber:
+          type: integer
+          format: int32
+        setType:
+          type: string
+          enum:
+          - WARMUP
+          - WORKING
+          - BACKOFF
+          - DROP
+          - FAILURE
+          - AMRAP
+        rir:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 0
+        note:
+          type: string
+          maxLength: 280
+          minLength: 0
+        completed:
+          type: boolean
+      required:
+      - enteredWeight
+      - reps
+      - setNumber
+      - weightEntryMode
+    PrDetectionResult:
+      type: object
+      properties:
+        weightPr:
+          type: boolean
+        estimatedOneRepMaxPr:
+          type: boolean
+        previousBestWeight:
+          type: number
+        previousBestEstimatedOneRepMax:
+          type: number
+    WorkoutSetResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+        exerciseCategory:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+        weight:
+          type: number
+        reps:
+          type: integer
+          format: int32
+        setNumber:
+          type: integer
+          format: int32
+        loggedAt:
+          type: string
+          format: date-time
+        setType:
+          type: string
+          enum:
+          - WARMUP
+          - WORKING
+          - BACKOFF
+          - DROP
+          - FAILURE
+          - AMRAP
+        rir:
+          type: integer
+          format: int32
+        weightEntryMode:
+          type: string
+          enum:
+          - TOTAL
+          - PER_SIDE
+        barWeight:
+          type: number
+        enteredWeight:
+          type: number
+        note:
+          type: string
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        prEvent:
+          $ref: "#/components/schemas/PrDetectionResult"
+    UpdateProgramRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - name
+    ProgramSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        dayCount:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProgramDayExerciseInput:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        orderInDay:
+          type: integer
+          format: int32
+          minimum: 1
+        targetSets:
+          type: integer
+          format: int32
+          minimum: 1
+        targetRepsMin:
+          type: integer
+          format: int32
+          minimum: 1
+        targetRepsMax:
+          type: integer
+          format: int32
+          minimum: 1
+        targetWeight:
+          type: number
+          minimum: 0.0
+      required:
+      - exerciseId
+      - orderInDay
+      - targetSets
+    UpdateProgramDayRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramDayExerciseInput"
+          maxItems: 2147483647
+          minItems: 1
+      required:
+      - exercises
+      - name
+    PlannedExerciseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+        orderInDay:
+          type: integer
+          format: int32
+        targetSets:
+          type: integer
+          format: int32
+        targetRepsMin:
+          type: integer
+          format: int32
+        targetRepsMax:
+          type: integer
+          format: int32
+        targetWeight:
+          type: number
+    ProgramDayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dayNumber:
+          type: integer
+          format: int32
+        name:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlannedExerciseResponse"
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        category:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+        thumbnailUrl:
+          type: string
+          maxLength: 2048
+          minLength: 0
+        demoVideoUrl:
+          type: string
+          maxLength: 2048
+          minLength: 0
+        mediaAttribution:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - category
+      - name
+    ExerciseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+        global:
+          type: boolean
+        owned:
+          type: boolean
+        thumbnailUrl:
+          type: string
+        demoVideoUrl:
+          type: string
+        mediaAttribution:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WorkoutResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - COMPLETED
+          - CANCELLED
+        source:
+          type: string
+          enum:
+          - MANUAL
+          - WEBHOOK
+          - NOTES_IMPORT
+        importStatus:
+          type: string
+          enum:
+          - NOT_APPLICABLE
+          - PENDING_REVIEW
+          - CONFIRMED
+          - REJECTED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateWorkoutSetRequest:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        weight:
+          type: number
+          minimum: 0
+        enteredWeight:
+          type: number
+          minimum: 0
+        weightEntryMode:
+          type: string
+          enum:
+          - TOTAL
+          - PER_SIDE
+        barWeight:
+          type: number
+          minimum: 0
+        reps:
+          type: integer
+          format: int32
+        setNumber:
+          type: integer
+          format: int32
+        setType:
+          type: string
+          enum:
+          - WARMUP
+          - WORKING
+          - BACKOFF
+          - DROP
+          - FAILURE
+          - AMRAP
+        rir:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 0
+        note:
+          type: string
+          maxLength: 280
+          minLength: 0
+        completed:
+          type: boolean
+        loggedAt:
+          type: string
+          format: date-time
+      required:
+      - exerciseId
+      - reps
+      - setNumber
+    CreateBatchWorkoutSetsRequest:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        count:
+          type: integer
+          format: int32
+          maximum: 20
+        weight:
+          type: number
+          minimum: 0
+        enteredWeight:
+          type: number
+          minimum: 0
+        weightEntryMode:
+          type: string
+          enum:
+          - TOTAL
+          - PER_SIDE
+        barWeight:
+          type: number
+          minimum: 0
+        reps:
+          type: integer
+          format: int32
+        setType:
+          type: string
+          enum:
+          - WARMUP
+          - WORKING
+          - BACKOFF
+          - DROP
+          - FAILURE
+          - AMRAP
+        rir:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 0
+        note:
+          type: string
+          maxLength: 280
+          minLength: 0
+        completed:
+          type: boolean
+        startingSetNumber:
+          type: integer
+          format: int32
+      required:
+      - count
+      - exerciseId
+      - reps
+    CheckInWebhookResponse:
+      type: object
+      properties:
+        checkInId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+        status:
+          type: string
+          enum:
+          - RECEIVED
+          - PROCESSED
+          - DUPLICATE
+          - REJECTED
+          - FAILED
+        workoutId:
+          type: string
+          format: uuid
+        message:
+          type: string
+    Estimate1RmRequest:
+      type: object
+      properties:
+        exerciseName:
+          type: string
+        weight:
+          type: number
+          minimum: 0
+        reps:
+          type: integer
+          format: int32
+        rir:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 0
+      required:
+      - reps
+      - weight
+    Estimate1RmResponse:
+      type: object
+      properties:
+        exerciseName:
+          type: string
+        epley:
+          type: number
+        brzycki:
+          type: number
+        workingEstimate:
+          type: number
+        rangeMin:
+          type: number
+        rangeMax:
+          type: number
+        lowConfidence:
+          type: boolean
+        rirContext:
+          type: integer
+          format: int32
+        confidenceNote:
+          type: string
+    CreateReadinessRequest:
+      type: object
+      properties:
+        workoutId:
+          type: string
+          format: uuid
+        sleepHours:
+          type: number
+          maximum: 24.0
+          minimum: 0.0
+        sleepQuality:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 1
+        energyLevel:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 1
+        soreness:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 1
+        stress:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 1
+        note:
+          type: string
+          maxLength: 500
+          minLength: 0
+    ReadinessResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workoutId:
+          type: string
+          format: uuid
+        sleepHours:
+          type: number
+        sleepQuality:
+          type: integer
+          format: int32
+        energyLevel:
+          type: integer
+          format: int32
+        soreness:
+          type: integer
+          format: int32
+        stress:
+          type: integer
+          format: int32
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CreateProgramRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - name
+    CreateProgramDayRequest:
+      type: object
+      properties:
+        dayNumber:
+          type: integer
+          format: int32
+          minimum: 1
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramDayExerciseInput"
+          maxItems: 2147483647
+          minItems: 1
+      required:
+      - dayNumber
+      - exercises
+      - name
+    StartProgramDayResponse:
+      type: object
+      properties:
+        workout:
+          $ref: "#/components/schemas/WorkoutResponse"
+        plannedExercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlannedExerciseResponse"
+    ImportNotesRequest:
+      type: object
+      properties:
+        rawText:
+          type: string
+          maxLength: 10000
+          minLength: 0
+      required:
+      - rawText
+    WorkoutDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - COMPLETED
+          - CANCELLED
+        source:
+          type: string
+          enum:
+          - MANUAL
+          - WEBHOOK
+          - NOTES_IMPORT
+        importStatus:
+          type: string
+          enum:
+          - NOT_APPLICABLE
+          - PENDING_REVIEW
+          - CONFIRMED
+          - REJECTED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutSetResponse"
+    CreateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        category:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+        thumbnailUrl:
+          type: string
+          maxLength: 2048
+          minLength: 0
+        demoVideoUrl:
+          type: string
+          maxLength: 2048
+          minLength: 0
+        mediaAttribution:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - category
+      - name
+    ExerciseMediaSuggestionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        thumbnailUrl:
+          type: string
+        demoVideoUrl:
+          type: string
+        mediaAttribution:
+          type: string
+        source:
+          type: string
+          enum:
+          - CURATED
+          - WIKIMEDIA
+          - YOUTUBE_API
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        status:
+          type: string
+          enum:
+          - PENDING
+          - CONFIRMED
+          - REJECTED
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+    ApplyCoachRecommendationRequest:
+      type: object
+      properties:
+        workoutId:
+          type: string
+          format: uuid
+      required:
+      - workoutId
+    GenerateCoachRequest:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        workoutId:
+          type: string
+          format: uuid
+    CoachRecommendationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        basedOnWorkoutId:
+          type: string
+          format: uuid
+        readinessCheckInId:
+          type: string
+          format: uuid
+        recommendationType:
+          type: string
+          enum:
+          - WEIGHT_ADJUSTMENT
+          - VOLUME_ADJUSTMENT
+          - DELOAD
+          - GENERAL
+          - SAFETY_HOLD
+        previousPerformance:
+          type: string
+        proposedChange:
+          type: string
+        reasoning:
+          type: string
+        confidenceLevel:
+          type: string
+          enum:
+          - LOW
+          - MEDIUM
+          - HIGH
+        status:
+          type: string
+          enum:
+          - PROPOSED
+          - ACCEPTED
+          - MODIFIED
+          - DISMISSED
+        createdAt:
+          type: string
+          format: date-time
+        respondedAt:
+          type: string
+          format: date-time
+    CoachChatRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        exerciseId:
+          type: string
+          format: uuid
+        workoutId:
+          type: string
+          format: uuid
+      required:
+      - message
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 255
+          minLength: 0
+        password:
+          type: string
+          maxLength: 100
+          minLength: 8
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - email
+      - name
+      - password
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        user:
+          $ref: "#/components/schemas/UserResponse"
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum:
+          - USER
+          - ADMIN
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    ModifyCoachRequest:
+      type: object
+      properties:
+        proposedChange:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        reasoning:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - proposedChange
+    Pageable:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        size:
+          type: integer
+          format: int32
+          minimum: 1
+        sort:
+          type: array
+          items:
+            type: string
+    PageResponseWorkoutResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+    CategoryVolume:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+          - CHEST
+          - BACK
+          - LEGS
+          - ARMS
+          - SHOULDERS
+          - CORE
+          - CARDIO
+          - FULL_BODY
+          - OTHER
+        volume:
+          type: number
+    ExerciseVolume:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+        volume:
+          type: number
+    WeeklyComparison:
+      type: object
+      properties:
+        priorWeekVolume:
+          type: number
+        volumeChange:
+          type: number
+        volumeChangePercent:
+          type: number
+          format: double
+    WeeklyStatsResponse:
+      type: object
+      properties:
+        weekStart:
+          type: string
+          format: date
+        weekEnd:
+          type: string
+          format: date
+        completedWorkouts:
+          type: integer
+          format: int64
+        totalSets:
+          type: integer
+          format: int64
+        totalReps:
+          type: integer
+          format: int64
+        totalVolume:
+          type: number
+        volumeByExercise:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseVolume"
+        volumeByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryVolume"
+        comparisonWithPriorWeek:
+          $ref: "#/components/schemas/WeeklyComparison"
+    VolumeTrendResponse:
+      type: object
+      properties:
+        weeks:
+          type: integer
+          format: int32
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyVolumePoint"
+    WeeklyVolumePoint:
+      type: object
+      properties:
+        weekStart:
+          type: string
+          format: date
+        weekEnd:
+          type: string
+          format: date
+        totalVolume:
+          type: number
+    ProgramDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramDayResponse"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PageResponseExerciseResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+    PersonalRecordResponse:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        heaviestWeight:
+          type: number
+        repsAtHeaviestWeight:
+          type: integer
+          format: int32
+        highestRepsAtHeaviestWeight:
+          type: integer
+          format: int32
+        heaviestWeightAchievedAt:
+          type: string
+          format: date-time
+        heaviestWeightWorkoutId:
+          type: string
+          format: uuid
+        estimatedOneRepMax:
+          type: number
+        estimatedOneRepMaxAchievedAt:
+          type: string
+          format: date-time
+        estimatedOneRepMaxWorkoutId:
+          type: string
+          format: uuid
+        disclaimer:
+          type: string
+    PrHistoryPoint:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        workoutId:
+          type: string
+          format: uuid
+        weight:
+          type: number
+        reps:
+          type: integer
+          format: int32
+        estimatedOneRepMax:
+          type: number
+    PrHistoryResponse:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrHistoryPoint"
+        disclaimer:
+          type: string
+    NextSessionRecommendationResponse:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        basedOnWorkoutId:
+          type: string
+          format: uuid
+        previousPerformance:
+          $ref: "#/components/schemas/PreviousPerformance"
+        recommendation:
+          $ref: "#/components/schemas/RecommendationOptions"
+        reason:
+          type: string
+        disclaimer:
+          type: string
+    PreviousPerformance:
+      type: object
+      properties:
+        weight:
+          type: number
+        reps:
+          type: integer
+          format: int32
+    RecommendationOption:
+      type: object
+      properties:
+        weight:
+          type: number
+        targetReps:
+          type: integer
+          format: int32
+    RecommendationOptions:
+      type: object
+      properties:
+        optionA:
+          $ref: "#/components/schemas/RecommendationOption"
+        optionB:
+          $ref: "#/components/schemas/RecommendationOption"
+    ExerciseDetailResponse:
+      type: object
+      properties:
+        exercise:
+          $ref: "#/components/schemas/ExerciseResponse"
+        personalRecord:
+          $ref: "#/components/schemas/PersonalRecordResponse"
+        prHistory:
+          $ref: "#/components/schemas/PrHistoryResponse"
+        recentSets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentSetRow"
+        activeRecommendation:
+          $ref: "#/components/schemas/CoachRecommendationResponse"
+    RecentSetRow:
+      type: object
+      properties:
+        setId:
+          type: string
+          format: uuid
+        workoutId:
+          type: string
+          format: uuid
+        loggedAt:
+          type: string
+          format: date-time
+        weight:
+          type: number
+        reps:
+          type: integer
+          format: int32
+        setNumber:
+          type: integer
+          format: int32
+    CoachApplyPreviewResponse:
+      type: object
+      properties:
+        workoutId:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetPreview"
+    SetPreview:
+      type: object
+      properties:
+        setId:
+          type: string
+          format: uuid
+        setNumber:
+          type: integer
+          format: int32
+        completed:
+          type: boolean
+        willChange:
+          type: boolean
+        currentWeight:
+          type: number
+        currentReps:
+          type: integer
+          format: int32
+        currentRir:
+          type: integer
+          format: int32
+        proposedWeight:
+          type: number
+        proposedReps:
+          type: integer
+          format: int32
+        proposedRir:
+          type: integer
+          format: int32
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: JWT access token obtained from /api/auth/login
+      name: bearerAuth
+      scheme: bearer
+      bearerFormat: JWT

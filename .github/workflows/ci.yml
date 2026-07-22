@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Verify
+        run: ./mvnw -B clean verify
+
+      - name: Upload JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+          retention-days: 14
+
+      - name: Upload OpenAPI specification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/openapi.yaml
+          retention-days: 30
+
+      - name: Upload SpotBugs report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-report
+          path: target/spotbugsXml.xml
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Build Docker image
+        run: docker build -t gymsync-api:ci .
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Typecheck and build
+        run: npm run build
