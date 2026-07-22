@@ -32,7 +32,7 @@
         -->
         <docker.api.version>1.41</docker.api.version>
         <spotless.version>2.44.5</spotless.version>
-        <spotbugs.version>4.8.6.6</spotbugs.version>
+        <spotbugs.version>4.10.3.0</spotbugs.version>
         <spotbugs.plugin.version>4.8.6</spotbugs.plugin.version>
     </properties>
 
