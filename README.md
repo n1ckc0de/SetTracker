@@ -431,6 +431,4 @@ but issues and discussion are welcome. If that changes, this section will be upd
 
 MIT — see [LICENSE](LICENSE).
 
-## Author
 
-[Author Name] — [author@example.com]
